@@ -7,66 +7,152 @@ import (
 	"strings"
 	"runtime"
 	"path"
+	"strconv"
+	"reverseproxy/utils"
 )
 
 /*  Routing Table Format
- *  .--------------------.
- *  |IP Port Path Gateway|
- *  '--------------------'
+ *  .-----------------------------------.
+ *  |IP | Port | Path | Version | Weight|
+ *  '-----------------------------------'
+ *
+ *  For optional fields Version and Weight if one is not specified
+ *  use the $ character
  */
 
 type Route struct {
 	Ip 			string
 	Port 		string
 	Path 		string
-	Gateway	string
+	Version string
+	Weight  int
+}
+
+type RouteManager struct {
+	Scheduler Scheduler
+	Routes    []Route
 }
 
 type RoutingTable struct {
-	Routes map[string]Route
+	RouteMap map[string]*RouteManager
 }
 
-func PrintRoutingTable(routingTable RoutingTable) {
-	fmt.Println("Ip         Port  Path        Gateway")
 
-	for key := range routingTable.Routes {
-		route := routingTable.Routes[key]
-		fmt.Fprintf(
-			os.Stdout,
-			"%s  %s  %s  %s\n",
-			route.Ip,
-			route.Port,
-			route.Path,
-			route.Gateway,
-		);
+func PrintRoutingTable(routingTable RoutingTable) {
+
+	var longestIp int = 0
+	var longestPort int = 0
+	var longestPath int = 0
+	var longestVersion int = 0
+
+	for key := range routingTable.RouteMap {
+		routeManager := routingTable.RouteMap[key]
+		routes := routeManager.Routes
+		for _, route := range routes {
+			if len(route.Ip) > longestIp {
+				longestIp = len(route.Ip)
+			}
+			if len(route.Port) > longestPort {
+				longestPort = len(route.Port)
+			}
+			if len(route.Path) > longestPath {
+				longestPath = len(route.Path)
+			}
+			if len(route.Version) > longestVersion {
+				longestVersion = len(route.Version)
+			}
+		}
+	}
+
+	spacesIp := strings.Repeat(" ", longestIp - 2)
+	spacesPort := strings.Repeat(" ", longestPort - 4)
+	spacesPath := strings.Repeat(" ", longestPath - 4)
+	spacesVersion := strings.Repeat(" ", longestVersion - 7)
+
+	headerLine := fmt.Sprintf(
+		"Ip%s | Port%s | Path%s | Version%s | Weight\n",
+		spacesIp,
+		spacesPort,
+		spacesPath,
+		spacesVersion,
+	)
+	dividerLine := strings.Repeat("-", len(headerLine))
+	fmt.Print(headerLine)
+	fmt.Println(dividerLine)
+
+	for key := range routingTable.RouteMap {
+		routeManager := routingTable.RouteMap[key]
+		routes := routeManager.Routes
+		for _, route := range routes {
+			fmt.Fprintf(
+				os.Stdout,
+				"%s | %s | %s | %s | %s\n",
+				route.Ip,
+				route.Port,
+				route.Path,
+				route.Version,
+				fmt.Sprintf("%d", route.Weight),
+			);
+		}
 	}
 }
 
+func routingTableParseError(field string) {
+	fmt.Fprintf(os.Stderr, "Field: [%s] has no value\n", field)
+	os.Exit(1)
+}
+
 func lineToRoute(line string) Route {
-	split := strings.Split(line, " ")
+	fmt.Println("line: ", line)
+	split := strings.Split(line, "|")
+	fmt.Println("split: ", split)
+
 
 	route := new(Route)
-	route.Ip      = split[0]
-	route.Port    = split[1]
-	route.Path    = split[2]
-	route.Gateway = split[3]
+	if ip := strings.TrimSpace(split[0]) ; ip == "$" {
+		routingTableParseError("ip")
+	} else {
+		route.Ip = ip
+	}
+
+	if port := strings.TrimSpace(split[1]) ; port == "$" {
+		routingTableParseError("port")
+	} else {
+		route.Port = port
+	}
+
+	if path := strings.TrimSpace(split[2]) ; path == "$" {
+		routingTableParseError("path")
+	} else {
+		route.Path = path
+	}
+
+	if version := strings.TrimSpace(split[3]) ; version == "$" {
+		route.Version = utils.ShortUid(&route.Path)
+	} else {
+		route.Version = version
+	}
+
+	if weight := strings.TrimSpace(split[4]) ; weight == "$" {
+		route.Weight = 1
+	} else {
+		route.Weight, _ = strconv.Atoi(weight)
+	}
 
 	return *route
 }
 
-func FindPath(path string, routingTable RoutingTable) *Route {
-	if route, exists := routingTable.Routes[path] ; exists {
-		return &route
-	} else {
-		return nil
-	}
-}
 
 func createRoutingTable(routes []Route) RoutingTable {
 	routingTable := new(RoutingTable)
-	routingTable.Routes = make(map[string]Route)
+	routingTable.RouteMap = make(map[string]*RouteManager)
 	for _, route := range routes {
-		routingTable.Routes[route.Path] = route
+		routeManager := routingTable.RouteMap[route.Path]
+		if routeManager == nil {
+			routingTable.RouteMap[route.Path] = new(RouteManager)
+			routeManager = routingTable.RouteMap[route.Path]
+		}
+		routeManager.Routes = append(routeManager.Routes, route)
 	}
 	return *routingTable
 }
