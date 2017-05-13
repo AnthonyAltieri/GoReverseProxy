@@ -8,11 +8,11 @@ import (
 )
 
 type Request struct {
-	ReqType string
-	Path string
-	HttpVersion string
-	Headers map[string]string
-	MessageBody map[string]string
+	ReqType      string
+	Path         string
+	HttpVersion  string
+	Headers      map[string]string
+	MessageBody  map[string]string
 }
 
 func parseMessageBody(body string) map[string]string {
