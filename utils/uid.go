@@ -1,11 +1,11 @@
 package utils
 
 import (
-	"time"
 	"hash/fnv"
 	"math/rand"
-	"fmt"
 )
+
+var SHORT_UID_LENGTH int = 7
 
 func hash(s string) uint32 {
 	h := fnv.New32a()
@@ -14,12 +14,17 @@ func hash(s string) uint32 {
 }
 
 func ShortUid(toHash *string) string {
-	rand.Seed(time.Now().Unix())
-	hashed := rand.Uint32()
-	if toHash != nil {
-		hashed = hash(*toHash)
+	return randomString(SHORT_UID_LENGTH)
+}
+
+func randomString(l int) string {
+	bytes := make([]byte, l)
+	for i := 0; i < l; i++ {
+		bytes[i] = byte(randInt(65, 90))
 	}
-	currentTime := time.Now().Unix()
-	doubleHash := fmt.Sprintf("%d", hash(fmt.Sprintf("%d:%d", hashed, currentTime)))
-	return doubleHash
+	return string(bytes)
+}
+
+func randInt(min int, max int) int {
+	return min + rand.Intn(max-min)
 }

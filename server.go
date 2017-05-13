@@ -8,6 +8,8 @@ import (
 	_ "./routing"
 	"reverseproxy/http"
 	"reverseproxy/routing"
+	"time"
+	"math/rand"
 )
 
 const (
@@ -15,6 +17,10 @@ const (
 	SERVER_PORT 		 = "8080"
 	CONNECTION_TYPE  = "tcp"
 )
+
+func init() {
+	rand.Seed(time.Now().UTC().UnixNano())
+}
 
 func main() {
 	routingTable := routing.ParseRoutingTable()
@@ -47,21 +53,20 @@ func handleRoutine(connection net.Conn, routingTable routing.RoutingTable) {
 	buffer := make([]byte, 1024)
   bufferLength, err := connection.Read(buffer)
 
-	fmt.Println("buffer", string(buffer))
-
 	if err != nil {
 		fmt.Println("Error reading:", err.Error())
 	}
 
 	var request http.Request = http.FormatRequest(buffer, bufferLength)
 	http.PrintRequest(request)
+	fmt.Println()
 
-	//var route *routing.Route = routing.FindPath(request.Path, routingTable)
+	var routes *[]routing.Route = routing.FindPath(request.Path, routingTable)
 
-	//if route == nil {
-	//	fmt.Println("Path not found in routing table")
-	//	os.Exit(0)
-	//}
+	if routes == nil {
+		fmt.Println("Path not found in routing table")
+		connection.Close()
+	}
 
 
 

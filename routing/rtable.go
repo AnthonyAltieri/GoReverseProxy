@@ -143,10 +143,9 @@ func PrintRoutingTable(routingTable RoutingTable) {
 	}
 	dividerLine += strings.Repeat("-", weightLength)
 
-	// Create the top line
-	topLine := strings.Repeat("-", len(dividerLine))
+	dashLine := strings.Repeat("-", len(dividerLine))
 
-	fmt.Println(topLine)
+	fmt.Println(dashLine)
 	fmt.Print(headerLine)
 	fmt.Println(dividerLine)
 
@@ -159,7 +158,6 @@ func PrintRoutingTable(routingTable RoutingTable) {
 			spacesPort := lengthPortSection - (len(route.Port) + SPACE_AFTER)
 			spacesPath := lengthPathSection - (len(route.Path) + SPACE_AFTER)
 			spacesVersion := lengthVersionSection - (len(route.Version) + SPACE_AFTER)
-
 			fmt.Fprintf(
 				os.Stdout,
 				"%s%s | %s%s | %s%s | %s%s | %s\n",
@@ -174,6 +172,7 @@ func PrintRoutingTable(routingTable RoutingTable) {
 				fmt.Sprintf("%d", route.Weight),
 			);
 		}
+		fmt.Println(dashLine)
 	}
 }
 
